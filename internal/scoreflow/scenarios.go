@@ -233,8 +233,13 @@ func RunScenario025() (string, error) { return scenario(eventstore.New(), 25) }
 func RunScenario026() (string, error) { return scenario(eventstore.New(), 26) }
 func RunScenario027() (result string, err error) {
 	s := eventstore.New()
-	release := s.Record027("member-27")
-	_ = release
+	// 批次1：获取资源。无论批次成功还是中途取消失败，
+	// defer 都会在批次作用域结束时释放资源。
+	func() {
+		release := s.Record027("member-27")
+		defer release()
+	}()
+	// 上一批资源已随批次结束释放，下一批可以立即开始，不再卡住。
 	if len(s.Snapshot("member-27")) == 1 {
 		return "blocked", nil
 	}
