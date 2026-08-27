@@ -1,6 +1,9 @@
 package eventstore
 
-import "sync"
+import (
+	"reflect"
+	"sync"
+)
 
 // EventStore owns score event state shared by request processors.
 type EventStore struct {
@@ -55,7 +58,13 @@ type Record019Processor struct{ prefix string }
 
 func (p *Record019Processor) Handle(v string) string { return p.prefix + v }
 func (s *EventStore) Record019(h Record019Handler, key string) string {
-	if h == nil {
+	// h == nil only catches an untyped nil interface. A typed-nil
+	// interface (e.g. a nil *Record019Processor assigned to the
+	// handler) is non-nil here yet still panics on Handle, which crashes
+	// the processor and drops all subsequent score events. Treat both
+	// forms of nil as a missing processor so callers get an explicit
+	// result and processing continues.
+	if h == nil || (reflect.ValueOf(h).Kind() == reflect.Ptr && reflect.ValueOf(h).IsNil()) {
 		return "missing"
 	}
 	return h.Handle(key)
