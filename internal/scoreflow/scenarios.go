@@ -226,8 +226,12 @@ func RunScenario018() (string, error) { return scenario(eventstore.New(), 18) }
 func RunScenario019() (string, error) { return scenario(eventstore.New(), 19) }
 func RunScenario020() (result string, err error) {
 	s := eventstore.New()
-	release := s.Record020("member-20")
-	_ = release
+	// 得分事件去重批次：批次开始获取资源，无论中途成功或失败，
+	// defer 都保证在批次结束时释放资源，使下一批事件能立即开始处理。
+	func() {
+		release := s.Record020("member-20")
+		defer release()
+	}()
 	if len(s.Snapshot("member-20")) == 1 {
 		return "blocked", nil
 	}
