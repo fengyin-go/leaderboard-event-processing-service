@@ -50,8 +50,10 @@ func (s *EventStore) IsDone(key string) bool {
 	return s.done[key]
 }
 
+// Record030 returns a defensive copy so callers can mutate the returned slice
+// without bleeding changes back into the store's stored values.
 func (s *EventStore) Record030(key string) []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.values[key]
+	return append([]string(nil), s.values[key]...)
 }
