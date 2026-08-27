@@ -50,8 +50,10 @@ func (s *EventStore) IsDone(key string) bool {
 	return s.done[key]
 }
 
+// Record023 读取成员已确认值。返回切片的防御性副本，
+// 调用方对返回列表的改动不会串回存储，已确认值保持不变。
 func (s *EventStore) Record023(key string) []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.values[key]
+	return append([]string(nil), s.values[key]...)
 }
