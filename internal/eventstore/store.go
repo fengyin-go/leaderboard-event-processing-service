@@ -50,10 +50,20 @@ func (s *EventStore) IsDone(key string) bool {
 	return s.done[key]
 }
 
+// Record028 records a ranking change for the given event key. The first
+// submission records the change and returns true; any subsequent submission
+// for the same key is a duplicate and returns false without appending another
+// change, so re-reading the final ranking state is not duplicated.
+//
+// The done-check and the append are performed under a single lock hold so that
+// concurrent duplicate submissions cannot both record a change.
 func (s *EventStore) Record028(key string) bool {
-	if s.IsDone(key) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.done[key] {
 		return false
 	}
-	s.Append(key, "change")
+	s.done[key] = true
+	s.values[key] = append(s.values[key], "change")
 	return true
 }
