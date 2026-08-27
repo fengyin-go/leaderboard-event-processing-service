@@ -50,10 +50,14 @@ func (s *EventStore) IsDone(key string) bool {
 	return s.done[key]
 }
 
+// Record021 提交一次排名变动并标记完成。
+// 重复提交同一事件编号时只返回已有状态（false），不再追加新的变动，
+// 与 runIdempotent/runState 的幂等约定保持一致。
 func (s *EventStore) Record021(key string) bool {
 	if s.IsDone(key) {
 		return false
 	}
+	s.MarkDone(key)
 	s.Append(key, "change")
 	return true
 }
