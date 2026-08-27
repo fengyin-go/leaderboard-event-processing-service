@@ -54,12 +54,12 @@ func (s *EventStore) IsDone(key string) bool {
 	return s.done[key]
 }
 
+// Record017 records the outcome of a single score-event request under key.
+// Each call reflects only the ctx it is given: a cancelled request records its
+// own cancellation, while a subsequent healthy request records a clean
+// result. The previous request's state never carries over.
 func (s *EventStore) Record017(key string, ctx context.Context) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if previous := s.values[key]; len(previous) > 0 {
-		s.values[key] = append(previous, previous[0])
-		return
-	}
-	s.values[key] = []string{fmt.Sprint(ctx.Err())}
+	s.values[key] = append(s.values[key], fmt.Sprint(ctx.Err()))
 }
