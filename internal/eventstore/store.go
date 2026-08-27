@@ -56,9 +56,10 @@ func (s *EventStore) IsDone(key string) bool {
 
 func (s *EventStore) Record018(key string, attempt int) error {
 	s.SetAttempt(key, attempt)
-	s.Append(key, fmt.Sprint(attempt))
 	if attempt == 1 {
+		// 临时错误表示写入未生效，不持久化，留给后续重试落地。
 		return errors.New("temporary")
 	}
+	s.Append(key, fmt.Sprint(attempt))
 	return nil
 }
