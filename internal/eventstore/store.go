@@ -53,5 +53,8 @@ func (s *EventStore) IsDone(key string) bool {
 func (s *EventStore) Record016(key string) []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.values[key]
+	// Return a defensive copy so callers can mutate the returned slice
+	// without writing back into the store's confirmed values. Mirrors
+	// Snapshot, which already copies to keep storage isolated.
+	return append([]string(nil), s.values[key]...)
 }
