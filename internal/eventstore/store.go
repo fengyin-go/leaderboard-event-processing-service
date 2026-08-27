@@ -1,6 +1,9 @@
 package eventstore
 
-import "sync"
+import (
+	"reflect"
+	"sync"
+)
 
 // EventStore owns score event state shared by request processors.
 type EventStore struct {
@@ -55,7 +58,10 @@ type Record026Processor struct{ prefix string }
 
 func (p *Record026Processor) Handle(v string) string { return p.prefix + v }
 func (s *EventStore) Record026(h Record026Handler, key string) string {
-	if h == nil {
+	// h 可能是 typed-nil interface：h == nil 检测不到，调用会解引用 nil 指针 panic。
+	// 因此既判接口为空，也判其底层值为空，缺失处理器时返回明确状态而非崩溃，
+	// 让上层把这条得分记为失败并继续处理后续事件。
+	if h == nil || reflect.ValueOf(h).IsNil() {
 		return "missing"
 	}
 	return h.Handle(key)
