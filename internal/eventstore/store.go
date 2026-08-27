@@ -54,10 +54,27 @@ func (s *EventStore) IsDone(key string) bool {
 	return s.done[key]
 }
 
+// Rollback drops the most recently appended value for key, undoing a write that
+// failed as part of an isolated batch. It is a no-op when key has no values, so
+// a rollback always balances a single preceding Append.
+func (s *EventStore) Rollback(key string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	v := s.values[key]
+	if len(v) == 0 {
+		return
+	}
+	s.values[key] = v[:len(v)-1]
+}
+
 func (s *EventStore) Record025(key string, attempt int) error {
 	s.SetAttempt(key, attempt)
 	s.Append(key, fmt.Sprint(attempt))
 	if attempt == 1 {
+		// The write was rejected with a temporary error, so roll it back to
+		// keep the batch isolated. The retried attempt then produces the only
+		// committed value, leaving a single result for the event.
+		s.Rollback(key)
 		return errors.New("temporary")
 	}
 	return nil
