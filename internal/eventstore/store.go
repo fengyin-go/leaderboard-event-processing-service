@@ -2,7 +2,6 @@ package eventstore
 
 import (
 	"context"
-	"fmt"
 	"sync"
 )
 
@@ -57,9 +56,12 @@ func (s *EventStore) IsDone(key string) bool {
 func (s *EventStore) Record024(key string, ctx context.Context) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if previous := s.values[key]; len(previous) > 0 {
-		s.values[key] = append(previous, previous[0])
-		return
+	// 每次只记录本次请求 ctx 的状态：取消只影响被取消的那次请求，
+	// 下一条带全新 ctx 的正常得分事件会记录自己的（无错误）状态，
+	// 不会把上一次已取消请求的状态带到下一条事件里。
+	err := ""
+	if ctx.Err() != nil {
+		err = ctx.Err().Error()
 	}
-	s.values[key] = []string{fmt.Sprint(ctx.Err())}
+	s.values[key] = append(s.values[key], err)
 }
