@@ -51,13 +51,15 @@ func (s *EventStore) IsDone(key string) bool {
 }
 
 func (s *EventStore) Record029(key string, ready <-chan struct{}) ([]string, <-chan struct{}) {
+	// Snapshot the confirmed values before staging the pending write. The
+	// snapshot is a private copy, so the in-flight write below cannot leak
+	// into it: the returned read contains only confirmed values, never the
+	// uncommitted intermediate.
 	view := s.Snapshot(key)
 	done := make(chan struct{})
 	go func() {
 		<-ready
-		if len(view) > 0 {
-			view[0] = "pending-29"
-		}
+		s.Append(key, "pending-29")
 		close(done)
 	}()
 	return view, done
